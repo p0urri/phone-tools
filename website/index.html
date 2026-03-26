@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHONE CONTROL - Outil de contrôle Android</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <h1 class="logo">📱 PHONE CONTROL</h1>
+            <ul class="nav-links">
+                <li><a href="#features">Fonctionnalités</a></li>
+                <li><a href="#install">Installation</a></li>
+                <li><a href="#usage">Utilisation</a></li>
+                <li><a href="#legal">Légal</a></li>
+                <li><a href="https://github.com/shonor/phone-tools" target="_blank">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="container">
+            <h1>📱 PHONE CONTROL <span class="version">v4.0</span></h1>
+            <p>Contrôlez vos appareils Android à distance avec une seule commande</p>
+            <div class="header-buttons">
+                <a href="https://github.com/shonor/phone-tools" class="btn btn-primary">GitHub</a>
+                <a href="#install" class="btn btn-secondary">Installer</a>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2> Fonctionnalités</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="feature-icon">📡</span>
+                    <h3>Scan réseau</h3>
+                    <p>Détection des appareils, scan de ports et identification des vulnérabilités</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">📸</span>
+                    <h3>Capture d'écran</h3>
+                    <p>Capture instantanée de l'écran du téléphone</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">🎥</span>
+                    <h3>Streaming</h3>
+                    <p>Streaming en direct de l'écran en temps réel</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">📍</span>
+                    <h3>Géolocalisation</h3>
+                    <p>Ouvre Google Maps et capture la position</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">🔵</span>
+                    <h3>Bluetooth</h3>
+                    <p>Scan et connexion aux appareils Bluetooth</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">📦</span>
+                    <h3>Gestion d'applications</h3>
+                    <p>Installation et désinstallation à distance</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="install" class="install">
+        <div class="container">
+            <h2> Installation</h2>
+            <div class="code-block">
+                <pre><code>git clone https://github.com/shonor/phone-tools.git
+cd phone-tools
+chmod +x phone
+sudo ./install.sh</code></pre>
+            </div>
+            <p class="install-note">⚠️ Prérequis : ADB installé et débogage USB activé sur le téléphone</p>
+        </div>
+    </section>
+
+    <section id="usage" class="usage">
+        <div class="container">
+            <h2>📱 Utilisation</h2>
+            <div class="usage-demo">
+                <div class="terminal">
+                    <span class="prompt">shor></span> connect 192.168.1.54:5555<br>
+                    <span class="output">✅ Connecté à 192.168.1.54:5555</span><br>
+                    <span class="prompt">shor></span> info<br>
+                    <span class="output">Modèle : Pixel 6<br>Android : 14<br>Batterie : 87%</span><br>
+                    <span class="prompt">shor></span> scan<br>
+                    <span class="output">[+] 192.168.1.1<br>    Port 80 (HTTP) - Serveur web<br>[+] 192.168.1.54<br>    Port 5555 (ADB) - Debug Android</span><br>
+                    <span class="prompt">shor></span> capture<br>
+                    <span class="output">✅ Sauvegardé : screenshot_20250326_153045.png</span><br>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="legal" class="legal">
+        <div class="container">
+            <h2>⚠️ Conditions d'utilisation</h2>
+            <div class="legal-box">
+                <p><strong>Ce logiciel est fourni à des fins éducatives uniquement.</strong></p>
+                <ul>
+                    <li>Utilisez-le uniquement sur vos propres appareils</li>
+                    <li>Ne l'utilisez pas sans consentement explicite</li>
+                    <li>Respectez les lois et règlements en vigueur</li>
+                    <li>L'auteur décline toute responsabilité en cas d'usage abusif</li>
+                </ul>
+                <p class="legal-warning">📌 Toute utilisation non autorisée est strictement interdite.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>© 2024 PHONE CONTROL - by Shonor</p>
+            <p><a href="https://github.com/shonor/phone-tools">GitHub</a> | <a href="#">MIT License</a></p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

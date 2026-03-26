@@ -1,0 +1,387 @@
+#!/bin/bash
+
+# Vérifier si le script est appelé avec "m4s" (via un alias ou lien symbolique)
+if [[ "$0" == *"m4s" ]] || [[ "$1" == "m4s" ]]; then
+    # Si appelé avec m4s, on lance le mode interactif
+    exec "$0" "$@"
+    exit 0
+fi
+
+# ============================================
+# PHONE CONTROL - by m4s
+# Version: 4.1.4 - Mode Interactif
+# ============================================
+
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+DIM='\033[2m'
+NC='\033[0m'
+
+# Variables
+CURRENT_IP=""
+MSG_DIR="$HOME/phone_messages"
+mkdir -p "$MSG_DIR"
+
+# ============================================
+# AFFICHAGE
+# ============================================
+show_banner() {
+    clear
+    echo -e "${CYAN}"
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║     ██████╗ ██╗  ██╗ ██████╗ ███╗   ██╗███████╗              ║"
+    echo "║     ██╔══██╗██║  ██║██╔═══██╗████╗  ██║██╔════╝              ║"
+    echo "║     ██████╔╝███████║██║   ██║██╔██╗ ██║█████╗                ║"
+    echo "║     ██╔═══╝ ██╔══██║██║   ██║██║╚██╗██║██╔══╝                ║"
+    echo "║     ██║     ██║  ██║╚██████╔╝██║ ╚████║███████╗              ║"
+    echo "║     ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝              ║"
+    echo "║                                                              ║"
+    echo "║                    PHONE CONTROL v4.1.4                      ║"
+    echo "║                    by m4s                                    ║"
+    echo "╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo "https://guns.lol/m4sw"
+    echo ""
+}
+
+show_help() {
+    echo -e "${WHITE}COMMANDES DISPONIBLES${NC}"
+    echo ""
+    echo -e "${GREEN}> connect <IP>${NC}       - Se connecter a un telephone"
+    echo -e "${GREEN}> disconnect${NC}         - Deconnecter"
+    echo ""
+    echo -e "${GREEN}> info${NC}               - Infos completes"
+    echo -e "${GREEN}> contacts${NC}           - Liste des contacts"
+    echo -e "${GREEN}> emails${NC}             - Liste des emails"
+    echo -e "${GREEN}> location${NC}           - Google Maps + capture"
+    echo -e "${GREEN}> battery${NC}            - Etat batterie"
+    echo -e "${GREEN}> apps${NC}               - Applications installees"
+    echo ""
+    echo -e "${GREEN}> capture${NC}            - Capture d'ecran"
+    echo -e "${GREEN}> record${NC}             - Enregistrement video"
+    echo ""
+    echo -e "${GREEN}> scan${NC}               - Scan des reseaux Wi-Fi"
+    echo ""
+    echo -e "${GREEN}> install <apk>${NC}      - Installer une app"
+    echo -e "${GREEN}> uninstall <pkg>${NC}    - Desinstaller"
+    echo -e "${GREEN}> lock${NC}               - Verrouiller ecran"
+    echo -e "${GREEN}> unlock${NC}             - Deverrouiller l'ecran"
+    echo -e "${GREEN}> reboot${NC}             - Redemarrer"
+    echo ""
+    echo -e "${GREEN}> help${NC}               - Afficher cette aide"
+    echo -e "${GREEN}> exit${NC}               - Quitter"
+}
+
+# ============================================
+# FONCTIONS DE BASE
+# ============================================
+check_connection() {
+    if [ -z "$CURRENT_IP" ]; then
+        echo -e "${RED}X Aucun telephone connecte${NC}"
+        echo -e "${YELLOW}Utilise: connect <IP>${NC}"
+        return 1
+    fi
+    return 0
+}
+
+# ============================================
+# COMMANDES
+# ============================================
+cmd_connect() {
+    IP="$1"
+    if [ -z "$IP" ]; then
+        echo -e "${RED}X Specifie une IP${NC}"
+        echo -e "${YELLOW}Exemple: connect 192.168.1.54:5555${NC}"
+        return
+    fi
+    echo -e "${BLUE}Connexion a $IP...${NC}"
+    adb connect "$IP" 2>/dev/null
+    sleep 1
+    if adb devices | grep -q "$IP"; then
+        CURRENT_IP="$IP"
+        echo -e "${GREEN}Connecte a $CURRENT_IP${NC}"
+    else
+        echo -e "${RED}X Echec de connexion${NC}"
+    fi
+}
+
+cmd_disconnect() {
+    if [ -z "$CURRENT_IP" ]; then
+        echo -e "${YELLOW}Aucune connexion active${NC}"
+        return
+    fi
+    echo -e "${BLUE}Deconnexion de $CURRENT_IP...${NC}"
+    adb disconnect "$CURRENT_IP" 2>/dev/null
+    CURRENT_IP=""
+    echo -e "${GREEN}Deconnecte${NC}"
+}
+
+cmd_info() {
+    check_connection || return
+    echo -e "${GREEN}INFOS TELEPHONE${NC}"
+    echo -e "${YELLOW}====================================${NC}"
+    echo -e "${WHITE}Modele :${NC} $(adb -s $CURRENT_IP shell getprop ro.product.model 2>/dev/null)"
+    echo -e "${WHITE}Marque :${NC} $(adb -s $CURRENT_IP shell getprop ro.product.manufacturer 2>/dev/null)"
+    echo -e "${WHITE}Android :${NC} $(adb -s $CURRENT_IP shell getprop ro.build.version.release 2>/dev/null)"
+    echo ""
+    echo -e "${WHITE}Batterie :${NC}"
+    adb -s $CURRENT_IP shell dumpsys battery 2>/dev/null | grep -E "level|status|temperature"
+}
+
+cmd_contacts() {
+    check_connection || return
+    echo -e "${GREEN}CONTACTS${NC}"
+    echo -e "${YELLOW}====================================${NC}"
+    adb -s $CURRENT_IP shell content query --uri content://contacts/phones/ 2>/dev/null | while read line; do
+        NAME=$(echo "$line" | grep -oE 'display_name=[^,]+' | head -1 | sed 's/display_name=//' | tr -d "'")
+        NUMBER=$(echo "$line" | grep -oE 'number=[^,]+' | head -1 | sed 's/number=//' | tr -d "'")
+        if [ -n "$NAME" ] || [ -n "$NUMBER" ]; then
+            echo -e "${GREEN}>${NC} ${WHITE}$NAME${NC}"
+            echo -e "   $NUMBER"
+        fi
+    done
+}
+
+cmd_emails() {
+    check_connection || return
+    echo -e "${GREEN}EMAILS${NC}"
+    echo -e "${YELLOW}====================================${NC}"
+    adb -s $CURRENT_IP shell dumpsys account 2>/dev/null | grep -oE '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | sort -u
+}
+
+cmd_location() {
+    check_connection || return
+    echo -e "${GREEN}LOCALISATION${NC}"
+    echo -e "${YELLOW}====================================${NC}"
+    
+    # Ouvrir Google Maps sur le telephone
+    adb -s $CURRENT_IP shell am start -a android.intent.action.VIEW -d "https://maps.google.com"
+    sleep 2
+    
+    # Capturer l'ecran
+    FILE="location_$(date +%Y%m%d_%H%M%S).png"
+    adb -s $CURRENT_IP exec-out screencap -p > "$FILE"
+    
+    # Recuperer les coordonnees
+    LOC=$(adb -s $CURRENT_IP shell dumpsys location 2>/dev/null | grep "last location=Location\[" | tail -1)
+    
+    if [ -n "$LOC" ]; then
+        LAT=$(echo "$LOC" | grep -oE 'gps [0-9.-]+' | cut -d' ' -f2)
+        LON=$(echo "$LOC" | grep -oE ',[0-9.-]+' | head -1 | cut -d',' -f2)
+        echo -e "${GREEN}Latitude :${NC} $LAT"
+        echo -e "${GREEN}Longitude :${NC} $LON"
+        
+        # Sauvegarder les coordonnees
+        echo "Latitude: $LAT" > "${FILE%.png}.txt"
+        echo "Longitude: $LON" >> "${FILE%.png}.txt"
+        echo "Maps: https://maps.google.com/?q=$LAT,$LON" >> "${FILE%.png}.txt"
+        echo -e "${GREEN}Fichier : ${FILE%.png}.txt${NC}"
+    else
+        echo -e "${RED}X Localisation non disponible${NC}"
+    fi
+    
+    echo -e "${GREEN}Capture : $FILE${NC}"
+}
+
+cmd_battery() {
+    check_connection || return
+    echo -e "${GREEN}BATTERIE${NC}"
+    echo -e "${YELLOW}====================================${NC}"
+    adb -s $CURRENT_IP shell dumpsys battery 2>/dev/null
+}
+
+cmd_apps() {
+    check_connection || return
+    echo -e "${GREEN}APPLICATIONS${NC}"
+    echo -e "${YELLOW}====================================${NC}"
+    adb -s $CURRENT_IP shell pm list packages -3 2>/dev/null | sed 's/package://' | sort
+}
+
+cmd_capture() {
+    check_connection || return
+    FILE="screenshot_$(date +%Y%m%d_%H%M%S).png"
+    echo -e "${GREEN}Capture d'ecran...${NC}"
+    adb -s $CURRENT_IP exec-out screencap -p > "$FILE" 2>/dev/null
+    if [ -s "$FILE" ]; then
+        echo -e "${GREEN}Sauvegarde : $FILE${NC}"
+    else
+        echo -e "${RED}X Erreur${NC}"
+        rm -f "$FILE"
+    fi
+}
+
+cmd_record() {
+    check_connection || return
+    DUR="${1:-10}"
+    FILE="record_$(date +%Y%m%d_%H%M%S).mp4"
+    echo -e "${GREEN}Enregistrement de ${DUR}s...${NC}"
+    adb -s $CURRENT_IP shell screenrecord --time-limit $DUR /sdcard/temp.mp4 2>/dev/null
+    adb -s $CURRENT_IP pull /sdcard/temp.mp4 "$FILE" 2>/dev/null
+    adb -s $CURRENT_IP shell rm /sdcard/temp.mp4 2>/dev/null
+    if [ -f "$FILE" ]; then
+        echo -e "${GREEN}Sauvegarde : $FILE${NC}"
+    else
+        echo -e "${RED}X Erreur${NC}"
+    fi
+}
+
+cmd_scan() {
+    check_connection || return
+    echo -e "${GREEN}SCAN DES RESEAUX WI-FI${NC}"
+    echo -e "${YELLOW}====================================${NC}"
+    
+    # Activer le Wi-Fi si besoin
+    adb -s $CURRENT_IP shell svc wifi enable
+    
+    echo -e "${WHITE}Recherche des reseaux a proximite...${NC}"
+    echo ""
+    
+    # Scanner les reseaux Wi-Fi
+    adb -s $CURRENT_IP shell dumpsys wifi | grep -E "SSID:" | grep -v "null" | sort -u | while read line; do
+        SSID=$(echo "$line" | cut -d: -f2- | sed 's/ //g' | sed 's/"//g')
+        if [ -n "$SSID" ] && [ ${#SSID} -gt 1 ]; then
+            echo -e "${GREEN}[+]${NC} $SSID"
+        fi
+    done
+    
+    echo ""
+    echo -e "${WHITE}Reseau connecte :${NC}"
+    adb -s $CURRENT_IP shell dumpsys wifi | grep -E "mWifiInfo" | grep -o 'SSID: [^,]*'
+    
+    echo ""
+    echo -e "${WHITE}Adresse IP :${NC}"
+    adb -s $CURRENT_IP shell ip addr show | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'
+}
+
+cmd_install() {
+    check_connection || return
+    APP="$1"
+    if [ -z "$APP" ]; then
+        echo -e "${RED}X Specifie un fichier APK ou un package${NC}"
+        return
+    fi
+    if [[ "$APP" == *".apk" ]]; then
+        echo -e "${GREEN}Installation de $APP...${NC}"
+        adb -s $CURRENT_IP install -r "$APP"
+    else
+        echo -e "${GREEN}Recherche dans Play Store: $APP${NC}"
+        adb -s $CURRENT_IP shell am start -a android.intent.action.VIEW -d "market://details?id=$APP"
+    fi
+}
+
+cmd_uninstall() {
+    check_connection || return
+    PACKAGE="$1"
+    if [ -z "$PACKAGE" ]; then
+        echo -e "${RED}X Specifie le package a desinstaller${NC}"
+        return
+    fi
+    echo -e "${RED}Desinstallation de $PACKAGE...${NC}"
+    adb -s $CURRENT_IP uninstall "$PACKAGE"
+}
+
+cmd_lock() {
+    check_connection || return
+    echo -e "${BLUE}Verrouillage de l'ecran...${NC}"
+    adb -s $CURRENT_IP shell input keyevent KEYCODE_POWER
+    echo -e "${GREEN}Ecran verrouille${NC}"
+}
+
+cmd_unlock() {
+    check_connection || return
+    echo -e "${GREEN} Déverrouillage de l'écran...${NC}"
+    
+    # Allumer l'écran
+    adb -s $CURRENT_IP shell input keyevent KEYCODE_POWER
+    sleep 0.5
+    
+    # Swipe vers le haut pour déverrouiller
+    adb -s $CURRENT_IP shell input swipe 300 1000 300 500
+    
+    echo -e "${GREEN} Écran déverrouillé${NC}"
+}
+
+cmd_reboot() {
+    check_connection || return
+    echo -e "${RED}REDEMARRAGE...${NC}"
+    adb -s $CURRENT_IP shell reboot
+}
+
+# ============================================
+# MODE INTERACTIF
+# ============================================
+interactive_mode() {
+    show_banner
+    echo -e "${DIM}Mode interactif - Tape 'help' pour la liste des commandes${NC}"
+    echo -e "${DIM}Utilise 'connect <IP>' pour te connecter a un telephone${NC}"
+    echo ""
+    
+    while true; do
+        echo -ne "${GREEN}msf> ${NC}"
+        
+        read -r cmd arg1 arg2
+        
+        case "$cmd" in
+            connect)   cmd_connect "$arg1" ;;
+            disconnect) cmd_disconnect ;;
+            info)      cmd_info ;;
+            contacts)  cmd_contacts ;;
+            emails)    cmd_emails ;;
+            location)  cmd_location ;;
+            battery)   cmd_battery ;;
+            apps)      cmd_apps ;;
+            capture)   cmd_capture ;;
+            record)    cmd_record "$arg1" ;;
+            scan)      cmd_scan ;;
+            install)   cmd_install "$arg1" ;;
+            uninstall) cmd_uninstall "$arg1" ;;
+            lock)      cmd_lock ;;
+            unlock)    cmd_unlock ;;
+            reboot)    cmd_reboot ;;
+            help)      show_help ;;
+            exit|quit) 
+                echo -e "${RED}déconnecté ${NC}"
+                exit 0
+                ;;
+            "")
+                continue
+                ;;
+            *)
+                echo -e "${RED}X Commande inconnue : $cmd${NC}"
+                echo -e "${YELLOW}Tape 'help' pour voir les commandes${NC}"
+                ;;
+        esac
+        echo ""
+    done
+}
+
+# ============================================
+# POINT D'ENTREE
+# ============================================
+if [ $# -gt 0 ]; then
+    case "$1" in
+        connect)   cmd_connect "$2" ;;
+        disconnect) cmd_disconnect ;;
+        info)      [ -n "$2" ] && CURRENT_IP="$2"; cmd_info ;;
+        contacts)  [ -n "$2" ] && CURRENT_IP="$2"; cmd_contacts ;;
+        emails)    [ -n "$2" ] && CURRENT_IP="$2"; cmd_emails ;;
+        location)  [ -n "$2" ] && CURRENT_IP="$2"; cmd_location ;;
+        battery)   [ -n "$2" ] && CURRENT_IP="$2"; cmd_battery ;;
+        apps)      [ -n "$2" ] && CURRENT_IP="$2"; cmd_apps ;;
+        capture)   [ -n "$2" ] && CURRENT_IP="$2"; cmd_capture ;;
+        record)    [ -n "$2" ] && CURRENT_IP="$2"; cmd_record "$3" ;;
+        scan)      [ -n "$2" ] && CURRENT_IP="$2"; cmd_scan ;;
+        install)   [ -n "$2" ] && CURRENT_IP="$2"; cmd_install "$3" ;;
+        uninstall) [ -n "$2" ] && CURRENT_IP="$2"; cmd_uninstall "$3" ;;
+        lock)      [ -n "$2" ] && CURRENT_IP="$2"; cmd_lock ;;
+        unlock)    [ -n "$2" ] && CURRENT_IP="$2"; cmd_unlock ;;
+        reboot)    [ -n "$2" ] && CURRENT_IP="$2"; cmd_reboot ;;
+        help)      show_help ;;
+        *)         show_help ;;
+    esac
+else
+    interactive_mode
+fi
